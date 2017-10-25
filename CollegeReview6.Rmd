@@ -2,7 +2,9 @@
 title: "Evaluation of Colleges by SAT Scores and Annual Cost"
 author: "Claudia Cassidy"
 date: "10/25/2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 #### Introduction
@@ -228,7 +230,7 @@ kable(ccTop7590D, "html") %>%
 #print(ccTop7590D, row.names = FALSE)
 ```
 
-### Schools which ranked between 75th and 90th percentile as measured by total of the three best SAT scores
+
 
 ##### Click on a map pin to see the school name.
 
