@@ -13,6 +13,8 @@ output: html_document
 
 ##### The data includes information about Federal student loans and grants, but does not include private loans, scholarships or grants.  Therefore, data such as the average family income and average tuition paid are likely lower than what the numbers actually are since families with very high incomes would not have applied for financial aid. According to CNN Money (http://time.com/money/4520236/college-financial-aid-why-students-dont-apply/), about 80% of college students apply for financial aid.
 
+### As noted in the Data Documentation (https://collegescorecard.ed.gov/data/documentation/):  "many elements are available only for Title IV recipients, or students who receive federal grants and loans."
+
 ### The Process: Data Cleaning and Focus
 
 ##### The following analysis focuses on accredited schools, using the most current data from the 2015-16 school year.  It groups universities by SAT Scores and then shows how they compare by Annual Cost. I removed data about schools that were not 4 year degree institutions or that were specialty schools.  The schools in this analysis are general 4 year public or private colleges.  
@@ -139,8 +141,9 @@ print(ccTopTenthD, row.names = FALSE)
 #Use the leaflet library to create an interactive map.  
 library(leaflet)
 m = leaflet()
-m = addTiles(m)
-m <- addMarkers( m, lng = ccTopTenth$Longitude, lat = ccTopTenth$Latitude, popup = ccTopTenth$Name)
+m = addTiles(m) 
+m  %>% addProviderTiles(providers$OpenStreetMap)
+m <- addMarkers( m, lng = ccTopTenth$Longitude, lat = ccTopTenth$Latitude, popup = ccTopTenth$Name) 
 m
 
 # Top 10% of schools as measured by 90th percentile, total of best SAT scores
@@ -209,6 +212,7 @@ print(ccTop7590D, row.names = FALSE)
 
 ```{r}
 m = leaflet()
+m  %>% addProviderTiles(providers$OpenStreetMap)
 m = addTiles(m)
 m <- addMarkers( m, lng = ccTop7590$Longitude, lat = ccTop7590$Latitude, popup = ccTop7590$Name)
 m
@@ -284,6 +288,7 @@ print(ccTop5075D, row.names = FALSE)
 ```{r}
 m = leaflet()
 m = addTiles(m)
+m  %>% addProviderTiles(providers$OpenStreetMap)
 m <- addMarkers( m, lng = ccTop5075$Longitude, lat = ccTop5075$Latitude, popup = ccTop5075$Name)
 m
 
@@ -392,12 +397,15 @@ cor(ccCor$Tot3SAT75 ,ccCor$AdmRate2)
 
 #### The data further shows that the average family income in the top 10th percentile, $91,787, is higher than the 75-90th percentile, $87,285, which is in turn higher than the family income in the 50-75th percentile, $75,629.  The data is showing that perhaps Family Income determines your future SAT scores and therefore your likelihood of getting into a good college and therefore your chances of getting the best education in order to get the best job and preparation for financial success after graduation.
 
+#### Since colleges select the highest scores in each category and students are able to retake the SAT as many times as they'd like, it's possible that students in higher income homes were able to pay to have SAT preparation courses and to take the exam several times more than students who could not afford to retake the exam and thus improve their scores.
+
 #### Perhaps families with higher incomes are able to provide better quality education at the K-12 grades which leads to higher SAT scores.  Perhaps K-12 schools in wealthier neighborhoods and private schools better prepare students to score higher on the SAT which then leads to more opportunities for these students to get into better colleges. 
 
-##### Since colleges select the highest scores in each category and students are able to retake the SAT as many times as they'd like, it's possible that students in higher income homes were able to pay to have SAT preparation courses and to take the exam several times more than students who could not afford to do that.
+
 
 
 ```{r}
+
 #end
 ```
 
