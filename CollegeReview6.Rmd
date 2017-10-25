@@ -1,5 +1,5 @@
 ---
-title: "Evaluation of Colleges by Annual Cost and SAT Scores"
+title: "Evaluation of Colleges by SAT Scores and Annual Cost"
 author: "Claudia Cassidy"
 date: "10/25/2017"
 output: html_document
@@ -7,17 +7,17 @@ output: html_document
 
 #### Introduction
 
-##### When selecting a college, high school students and their families often try to identify universities which offer the best value for a high quality education. To help find this information, this analysis will use a dataset on data.gov which is maintained by the U.S. Department of Education and provides data about colleges at: https://collegescorecard.ed.gov/data/. 
+When selecting a college, high school students and their families often try to identify universities which offer the best value for a high quality education. To help find this information, this analysis will use a dataset on data.gov which is maintained by the U.S. Department of Education and provides data about colleges at: https://collegescorecard.ed.gov/data/. 
 
-##### While the dataset contains more than 2,000 fields of data, it is limited in that it seems to only include information about families who have applied for financial aid. It does not include families who earn too much money to qualify for financial aid and thus did not apply, families who would be eligible but did not apply, and international students who would not be eligible to apply for FAFSA.   
+While the dataset contains more than 2,000 fields of data, it is limited in that it seems to only include information about families who have applied for financial aid. It does not include families who earn too much money to qualify for financial aid and thus did not apply, families who would be eligible but did not apply, and international students who would not be eligible to apply for FAFSA.   
 
-##### The data includes information about Federal student loans and grants, but does not include private loans, scholarships or grants.  Therefore, data such as the average family income and average tuition paid are likely lower than what the numbers actually are since families with very high incomes would not have applied for financial aid. According to CNN Money (http://time.com/money/4520236/college-financial-aid-why-students-dont-apply/), about 80% of college students apply for financial aid.
+The data includes information about Federal student loans and grants, but does not include private loans, scholarships or grants.  Therefore, data such as the average family income and average tuition paid are likely lower than what the numbers actually are since families with very high incomes would not have applied for financial aid. According to CNN Money (http://time.com/money/4520236/college-financial-aid-why-students-dont-apply/), about 80% of college students apply for financial aid.
 
-##### As noted in the Data Documentation (https://collegescorecard.ed.gov/data/documentation/):  "many elements are available only for Title IV recipients, or students who receive federal grants and loans."
+As noted in the Data Documentation (https://collegescorecard.ed.gov/data/documentation/):  "many elements are available only for Title IV recipients, or students who receive federal grants and loans."
 
 ### The Process: Data Cleaning and Selection
 
-##### The following analysis focuses on accredited schools, using the most current data from the 2015-16 school year.  It groups universities by SAT Scores and then shows how they compare by Annual Cost. I removed data about schools that were not 4 year degree institutions or that were specialty schools.  The schools in this analysis are general 4 year public or private colleges.  
+The following analysis focuses on accredited schools, using the most current data from the 2015-16 school year.  It groups universities by SAT Scores and then shows how they compare by Annual Cost. I removed data about schools that were not 4 year degree institutions or that were specialty schools.  The schools in this analysis are general 4 year public or private colleges.  
 
 ##### I separated the colleges into three groups:  
 ##### 1 - Schools that rank in the 90th percentile or higher based on SAT scores
@@ -27,9 +27,6 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 options(knitr.table.format = "html")
-
-setwd("/Users/cassc042/Documents/ds")
-getwd()
 
 library(tidyr)
 library(dplyr)
@@ -41,6 +38,7 @@ library(maps)
 library(ggplot2)
 library(leaflet)
 library(kableExtra)
+library(flexdashboard)
 library(rio)
 install_formats()
 
@@ -48,17 +46,19 @@ cc <- read.csv("MERGED2015_16_PP.csv", header=T, fill = TRUE, row.names=1)
 
 ```
 
-##### After cleaning up the data, I wanted to group colleges in a meaningful way. The right fit for a student at a college might be related to many considerations, such as demographics, school size, location in a big city vs. a smaller suburb. Without data about GPA or campus culture, I decided that it might be most useful to group colleges by their SAT scores.  Students with similar SAT scores would likely fit in better with other students who had similar scores. For example, if a school's average SAT scores are much higher than a student's SAT scores, then the student might find herself lost and stressed at the intensity of the pace of learning.  
+After cleaning up the data, I wanted to group colleges in a meaningful way. The right fit for a student at a college might be related to many considerations, such as demographics, school size, location in a big city vs. a smaller suburb. Without data about GPA or campus culture, I decided that it might be most useful to group colleges by their SAT scores.  Students with similar SAT scores would likely fit in better with other students who had similar scores. For example, if a school's average SAT scores are much higher than a student's SAT scores, then the student might find herself lost and stressed at the intensity of the pace of learning.  
 
-##### I considered other ways to evaluate schools for the best student to school match, for example demographics data such as gender, race and family income, but these are highly subjective and cannot indicate a good fit. SAT scores could be used to group students who scored similarly. 
+I considered other ways to evaluate schools for the best student to school match, for example demographics data such as gender, race and family income, but these are highly subjective and cannot indicate a good fit. SAT scores could be used to group students who scored similarly. 
 
-##### Colleges allow students to take the SAT multiple times and will use only the highest SAT scores in each section to get a student's total SAT score.  Therefore, I used the sum of the 75th percentile SAT scores totaled by Math, Reading and Writing categories instead of the SAT Average to get a truer SAT average. 
+Colleges allow students to take the SAT multiple times and will use only the highest SAT scores in each section to get a student's total SAT score.  Therefore, I used the sum of the 75th percentile SAT scores totaled by Math, Reading and Writing categories instead of the SAT Average to get a truer SAT average. 
 
-##### Colleges also consider a student's Grade Point Average in High School, extra-curricular activities and essay submission when evaluating students.  Without this data, this analysis is limited in how accurate it can be in selecting schools that would be a good match.  It will, however, help to identify high quality schools that offer lower annual costs. 
+Colleges also consider a student's Grade Point Average in High School, extra-curricular activities and essay submission when evaluating students.  Without this data, this analysis is limited in how accurate it can be in selecting schools that would be a good match.  It will, however, help to identify high quality schools that offer lower annual costs. 
 
-##### Note that the SAT scoring has changed as of 2017.  The data in this analysis is based on the former scoring system.  Conversion of 2017 and beyond scores to the previous scoring system can be found at:  https://blog.ivywise.com/blog-0/sat-score-conversion-chart
+Note that the SAT scoring has changed as of 2017.  The data in this analysis is based on the former scoring system.  Conversion of 2017 and beyond scores to the previous scoring system can be found at:  https://blog.ivywise.com/blog-0/sat-score-conversion-chart
 
-##### Note: the analysis includes 4 year bachelor through PhD colleges and universities only.
+Note: the analysis includes 4 year bachelor through PhD colleges and universities only.
+
+##### The summary below shows that the highest score for each of the 3 sections: reading, math and writing, is 800.  Highest total score for all 3 is 2400.  The highest total score for reading and math without writing is 1600.
 
 ```{r}
 
@@ -114,7 +114,6 @@ summary(ccSum)
 
 ```
 
-##### The summary shows that the Max score for each of the 3 sections: reading, math and writing, is 800.  Max overall score for all 3 is 2400.  The highest overall score for reading and math without writing is 1600.
 
 ##### The 75th percentile of the highest sum of SAT scores is 1870 and the 90th percentile is 2160. The mean is 1749.
 
@@ -180,7 +179,8 @@ ggplot(ccTopTenth,
 
 ```
 
-#####  CONCLUSION:  It's expensive to go to most top tenth percentile schools. Most cost around $60,000-70,000 per year but there are several options that offer lower annual cost especially if you qualify for In-State tuition.
+##### CONCLUSION:  
+It's expensive to go to most top tenth percentile schools. Most cost around $60,000-70,000 per year but there are several options that offer lower annual cost especially if you qualify for In-State tuition.
 
 #### Top Tenth Percentile Schools Ordered by Annual Cost
 
@@ -203,7 +203,7 @@ kable(ccTopTenthD, "html") %>%
 
 #print(ccTopTenthD, row.names = FALSE)
 ```
-##### These are the top tenth percentile schools ranked by annual cost. Public Universities at In State Tuition rates cost about half of private schools while requiring similar SAT scores.
+These are the top tenth percentile schools ranked by annual cost. Public Universities at In State Tuition rates cost about half of private schools while requiring similar SAT scores.
 
 ### Group 2: Colleges as measured by 75th - 90th percentile of the top SAT scores where the combined scores are between 1870 and 2160
 
@@ -239,7 +239,8 @@ m = addTiles(m)
 m <- addMarkers( m, lng = ccTop7590$Longitude, lat = ccTop7590$Latitude, popup = ccTop7590$Name)
 m
 ```
-# Schools in the 75-90th percentile as ranked by the sum of the three highest SAT scores
+
+##### Schools in the 75-90th percentile as ranked by the sum of the three highest SAT scores
 
 ```{r}
 ggplot(ccTop7590,
@@ -253,7 +254,8 @@ ggplot(ccTop7590,
 
 ```{r}
 ```
-#### CONCLUSION:  In the 75-90th percentile, there is a wide range of costs and seemingly no correlation between annual cost and SAT scores.  
+##### CONCLUSION:  
+In the 75-90th percentile, there is a wide range of costs and seemingly no correlation between annual cost and SAT scores.  
 
 ### Top 75th - 90th Percentile Schools, Ordered by Annual Cost
 
@@ -285,12 +287,12 @@ summary(ccSumTop7590)
 
 
 
-### CONCLUSION:  In State tuition at Public Universities offers the lowest annual cost. Students who rank in the 75-90th percentile can get a better cost value by going to a public university in their state if that is an option.  
+##### CONCLUSION:  
+In State tuition at Public Universities offers the lowest annual cost. Students who rank in the 75-90th percentile can get a better cost value by going to a public university in their state if that is an option.  
 
-
-#### Average Annual Cost was $41,664 in 2015.  
-#### Average of the highest Total SAT scores:  1975
-#### Average Family Income of those students who applied for financial aid: $87,285
+##### Average Annual Cost was $41,664 in 2015.  
+##### Average of the highest Total SAT scores:  1975
+##### Average Family Income of those students who applied for financial aid: $87,285
 
 
 ### Group 3:  The 50th - 75th percentile schools as measured by the highest SAT scores combined:  between 1749 and 1870
@@ -340,7 +342,7 @@ ggplot(ccTop5075,
   geom_point() 
 ```
 
-### Here are the 50-75th percentile schools ordered by Annual Cost:
+#### The 50-75th percentile schools ordered by Annual Cost:
 ```{r}
 # Here are the 50-75th percentile schools ordered by Annual Cost:
 ccTop5075 <- ccTop5075[order(ccTop5075$`Cost Annual`, decreasing = FALSE), ]   
@@ -367,11 +369,12 @@ summary(ccSumTop5075)
 ```
 
 ##### Average Annual Cost was $36,230 in 2015.  
-### Average of the highest Total SAT scores:  1802
-### Average Family Income of those students who applied for financial aid: $75,629
+##### Average of the highest Total SAT scores:  1802
+##### Average Family Income of those students who applied for financial aid: $75,629
 
 
-### CONCLUSION:  For the top 10th percentile, there are a handful of public universities with in state tuition costs that are about half as expensive as private schools in this group.  For the 75-90th percentile, there are many more choices for lower cost schools with similarly high SAT scores as those that are more expensive.  For the 50-75th percentiles, it is a much better value to select an in-state college.
+#### CONCLUSION:  
+For the top 10th percentile, there are a handful of public universities with in state tuition costs that are about half as expensive as private schools in this group.  For the 75-90th percentile, there are many more choices for lower cost schools with similarly high SAT scores as those that are more expensive.  For the 50-75th percentiles, it is a much better value to select an in-state college.
 
 
 ```{r}
@@ -405,7 +408,8 @@ cor(ccTop7590$Tot3SAT75,ccTop7590$`Cost Annual`)
 ```{r}
 cor(ccTopTenth$Tot3SAT75,ccTopTenth$`Cost Annual`)
 ```
-### There is a .41 correlation between SAT Scores and Annual Cost at the top 10th percentile. There is almost no correlation at the 50-75th and 75-90th percentiles.
+
+##### There is a .41 correlation between SAT Scores and Annual Cost at the top 10th percentile. There is almost no correlation at the 50-75th and 75-90th percentiles.
 
 
 
@@ -417,10 +421,11 @@ ccCor <-subset(cc2, (!is.na(cc2$Tot3SAT75)))
 cor(ccCor$Tot3SAT75,ccCor$`Family Income`)
 ```
 
-#### From the data it looks like there is a correlation between family income and SAT Scores.  Students from families who have a higher average income are more likely to have higher SAT scores.  Students who have higher SAT scores are more likely to be admitted into the top 10 percentile of schools.
+#### CONCLUSION:
+From the data it looks like there is a correlation between family income and SAT Scores.Students from families who have a higher average income are more likely to have higher SAT scores.  Students who have higher SAT scores are more likely to be admitted into the top 10 percentile of schools.
 
-#### Correlation between Admission Rate and SAT Scores
-#### There is a .57 correlation between SAT Scores and Admission rates
+##### Correlation between Admission Rate and SAT Scores
+##### There is a .57 correlation between SAT Scores and Admission rates
 
 ```{r}
 ccCor <-subset(cc2, (!is.na(cc2$Tot3SAT75)))
@@ -433,13 +438,13 @@ cor(ccCor$Tot3SAT75 ,ccCor$AdmRate2)
 
 ### REFLECTIONS
 
-#### It would be interesting to explore further if there is a causation between Family Income and Admittance Rate into the top colleges.  The data shows that there is a correlation between Family Income and High SAT scores and the top 10 percentile of colleges accepts the highest SAT scores.  A student from a higher income family is perhaps more likely to have higher SAT scores.  
+It would be interesting to explore further if there is a causation between Family Income and Admittance Rate into the top colleges.  The data shows that there is a correlation between Family Income and High SAT scores and the top 10 percentile of colleges accepts the highest SAT scores. A student from a higher income family is perhaps more likely to have higher SAT scores.  
 
-#### The data further shows that the average family income in the top 10th percentile, $91,787, is higher than the 75-90th percentile, $87,285, which is in turn higher than the family income in the 50-75th percentile, $75,629.  The data is showing that perhaps Family Income determines your future SAT scores and therefore your likelihood of getting into a good college and therefore your chances of getting the best education in order to get the best job and preparation for financial success after graduation.
+The data further shows that the average family income in the top 10th percentile, $91,787, is higher than the 75-90th percentile, $87,285, which is in turn higher than the family income in the 50-75th percentile, $75,629.  Perhaps Family Income determines your future SAT scores and therefore your likelihood of getting into a good college and therefore your chances of getting the best education in order to get the best job and preparation for financial success after graduation.
 
-#### Since colleges select the highest scores in each category and students are able to retake the SAT as many times as they'd like, it's possible that students in higher income homes were able to pay to have SAT preparation courses and to take the exam several times more than students who could not afford to retake the exam and thus improve their scores.
+Since colleges select the highest scores in each category and students are able to retake the SAT as many times as they'd like, it's possible that students in higher income homes were able to spend more money on SAT preparation courses and to take the exam several times more than students who could not afford to retake the exam and thus improve their scores.
 
-#### Perhaps families with higher incomes are able to provide better quality education at the K-12 grades which leads to higher SAT scores.  Perhaps K-12 schools in wealthier neighborhoods and private schools better prepare students to score higher on the SAT which then leads to more opportunities for these students to get into better colleges. 
+It would also be interesting to find out if families with higher incomes are able to provide better quality education at the K-12 grades which leads to higher SAT scores.  Perhaps K-12 schools in wealthier neighborhoods and private schools are better prepared to score higher on the SAT which then leads to more opportunities for these students to get into better colleges. 
 
 
 
