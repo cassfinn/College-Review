@@ -1,21 +1,21 @@
 ---
-title: "Best Value Colleges"
+title: "Evaluation of Colleges by Annual Cost and SAT Scores"
 author: "Claudia Cassidy"
-date: "10/23/2017"
+date: "10/25/2017"
 output: html_document
 ---
 
 #### Introduction
 
-##### When selecting a college, high school students and their families try to identify universities which offer the best value for a high quality education. To help find this information, this analysis will use a dataset on data.gov which is maintained by the U.S. Department of Education and provides data about colleges at: https://collegescorecard.ed.gov/data/. 
+##### When selecting a college, high school students and their families often try to identify universities which offer the best value for a high quality education. To help find this information, this analysis will use a dataset on data.gov which is maintained by the U.S. Department of Education and provides data about colleges at: https://collegescorecard.ed.gov/data/. 
 
 ##### While the dataset contains more than 2,000 fields of data, it is limited in that it seems to only include information about families who have applied for financial aid. It does not include families who earn too much money to qualify for financial aid and thus did not apply, families who would be eligible but did not apply, and international students who would not be eligible to apply for FAFSA.   
 
 ##### The data includes information about Federal student loans and grants, but does not include private loans, scholarships or grants.  Therefore, data such as the average family income and average tuition paid are likely lower than what the numbers actually are since families with very high incomes would not have applied for financial aid. According to CNN Money (http://time.com/money/4520236/college-financial-aid-why-students-dont-apply/), about 80% of college students apply for financial aid.
 
-### As noted in the Data Documentation (https://collegescorecard.ed.gov/data/documentation/):  "many elements are available only for Title IV recipients, or students who receive federal grants and loans."
+##### As noted in the Data Documentation (https://collegescorecard.ed.gov/data/documentation/):  "many elements are available only for Title IV recipients, or students who receive federal grants and loans."
 
-### The Process: Data Cleaning and Focus
+### The Process: Data Cleaning and Selection
 
 ##### The following analysis focuses on accredited schools, using the most current data from the 2015-16 school year.  It groups universities by SAT Scores and then shows how they compare by Annual Cost. I removed data about schools that were not 4 year degree institutions or that were specialty schools.  The schools in this analysis are general 4 year public or private colleges.  
 
@@ -26,6 +26,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+options(knitr.table.format = "html")
 
 setwd("/Users/cassc042/Documents/ds")
 getwd()
@@ -39,6 +40,7 @@ library(gridExtra)
 library(maps)
 library(ggplot2)
 library(leaflet)
+library(kableExtra)
 library(rio)
 install_formats()
 
@@ -112,11 +114,11 @@ summary(ccSum)
 
 ```
 
-##### The summary shows that the Max score for each of the 3 sections: reading, math and writing, is 800.  Max overall score for all 3 is 2400.  Max overall score for reading and math without writing is 1600.
+##### The summary shows that the Max score for each of the 3 sections: reading, math and writing, is 800.  Max overall score for all 3 is 2400.  The highest overall score for reading and math without writing is 1600.
 
 ##### The 75th percentile of the highest sum of SAT scores is 1870 and the 90th percentile is 2160. The mean is 1749.
 
-### Group 1:  The top schools as measured by minimum of 90th percentile of the top SAT scores combined: 2160
+### Group 1:  Top 10th Percentile Schools as measured by minimum of 90th percentile of the top SAT scores combined: 2160, Orderd by SAT Scores
 
 ```{r}
 # First, let's show the top schools as measured by 90th percentile of the top SAT scores combined: 2160
@@ -129,11 +131,19 @@ ccTopTenth <- subset(ccTopTenth, ccTopTenth$Tot3SAT75 >= 2160)
 ccTopTenthC <- c("Name","Tot3SAT75","Cost Annual","Family Income")
 ccTopTenthD <- ccTopTenth[ccTopTenthC]
 
-ccTopTenthD <- ccTopTenthD[order(ccTopTenthD$Tot3SAT75, decreasing = TRUE), ]   
-print(ccTopTenthD, row.names = FALSE)
+ccTopTenthD <- ccTopTenthD[order(ccTopTenthD$Tot3SAT75, decreasing = TRUE), ]
+
+library(knitr)
+kable(ccTopTenthD, "html") %>%
+  kable_styling("striped", full_width = F, font_size = 12) %>%
+   column_spec(2, width = "30em")  %>% 
+ scroll_box(width = "100%", height = "200px")
+
+#print(ccTopTenthD, row.names = FALSE)
 ```
 
-#### Here is an interactive map which shows where each school is located. Click on the map pin to see the school name.  
+#### Location of Top 10th Percentile Colleges 
+#####Click on the map pin to see the school name.  
 
 
 ```{r}
@@ -149,7 +159,7 @@ m
 # Top 10% of schools as measured by 90th percentile, total of best SAT scores
 #Map of the top 54 schools in the US as ranked by highest total SAT scores in Reading, Math and Writing
 ```
-#### Top 10th percentile colleges. 
+#### Summary of the Top 10th percentile colleges. 
 
 ```{r}
 
@@ -170,9 +180,9 @@ ggplot(ccTopTenth,
 
 ```
 
-#####  CONCLUSION:  It's expensive to go to most top tenth percentile schools. Most cost around $60-70,000 per year but there are several options that offer lower annual cost especially if you qualify for In-State tuition.
+#####  CONCLUSION:  It's expensive to go to most top tenth percentile schools. Most cost around $60,000-70,000 per year but there are several options that offer lower annual cost especially if you qualify for In-State tuition.
 
-### Top Tenth Percentile schools ordered by Annual Cost
+#### Top Tenth Percentile Schools Ordered by Annual Cost
 
 ```{r}
 # Here are the top tenth percentile schools ordered by Annual Cost:
@@ -185,7 +195,13 @@ ccTopTenthC <- c("Name","Tot3SAT75","Cost Annual","Family Income")
 ccTopTenthD <- ccTopTenth[ccTopTenthC]
 ccTopTenthD <- ccTopTenthD[order(ccTopTenthD$`Cost Annual`, decreasing = TRUE), ]   
 
-print(ccTopTenthD, row.names = FALSE)
+library(knitr)
+kable(ccTopTenthD, "html") %>%
+  kable_styling("striped", full_width = F, font_size = 12) %>%
+   column_spec(2, width = "30em")  %>% 
+ scroll_box(width = "100%", height = "200px")
+
+#print(ccTopTenthD, row.names = FALSE)
 ```
 ##### These are the top tenth percentile schools ranked by annual cost. Public Universities at In State Tuition rates cost about half of private schools while requiring similar SAT scores.
 
@@ -203,7 +219,13 @@ ccTop7590C <- c("Name","Tot3SAT75","Cost Annual","Family Income")
 ccTop7590D <- ccTop7590[ccTop7590C]
 ccTop7590D <- ccTop7590D[order(ccTop7590D$Tot3SAT75, decreasing = TRUE), ]   
 
-print(ccTop7590D, row.names = FALSE)
+library(knitr)
+kable(ccTop7590D, "html") %>%
+  kable_styling("striped", full_width = F, font_size = 12) %>%
+   column_spec(2, width = "30em")  %>% 
+ scroll_box(width = "100%", height = "200px")
+
+#print(ccTop7590D, row.names = FALSE)
 ```
 
 ### Schools which ranked between 75th and 90th percentile as measured by total of the three best SAT scores
@@ -243,7 +265,13 @@ ccTop7590C <- c("Name","Tot3SAT75","Cost Annual","Family Income")
 ccTop7590D <- ccTop7590[ccTopTenthC]
 ccTop7590D <- ccTop7590D[order(ccTopTenthD$`Cost Annual`, decreasing = TRUE), ]   
 
-print(ccTop7590D, row.names = FALSE)
+library(knitr)
+kable(ccTop7590D, "html") %>%
+  kable_styling("striped", full_width = F, font_size = 12) %>%
+   column_spec(2, width = "30em")  %>% 
+ scroll_box(width = "100%", height = "200px")
+
+#print(ccTop7590D, row.names = FALSE)
 
 ```
 
@@ -279,7 +307,13 @@ ccTop5075C <- c("Name","Tot3SAT75","Cost Annual","Family Income")
 ccTop5075D <- ccTop5075[ccTop5075C]
 ccTop5075D <- ccTop5075D[order(ccTop5075D$Tot3SAT75, decreasing = TRUE), ]   
 
-print(ccTop5075D, row.names = FALSE)
+library(knitr)
+kable(ccTop5075D, "html") %>%
+  kable_styling("striped", full_width = F, font_size = 12) %>%
+   column_spec(2, width = "30em")  %>% 
+ scroll_box(width = "100%", height = "200px")
+
+#print(ccTop5075D, row.names = FALSE)
 
 ```
 ```{r}
@@ -315,7 +349,13 @@ ccTop5075C <- c("Name","Tot3SAT75","Cost Annual","Family Income")
 ccTop5075D <- ccTop5075[ccTop5075C]
 ccTop5075D <- ccTop5075D[order(ccTop5075D$`Cost Annual`, decreasing = FALSE), ]   
 
-print(ccTop5075D, row.names = FALSE)
+library(knitr)
+kable(ccTop5075D, "html") %>%
+  kable_styling("striped", full_width = F, font_size = 12) %>%
+   column_spec(2, width = "30em")  %>% 
+ scroll_box(width = "100%", height = "200px")
+
+#print(ccTop5075D, row.names = FALSE)
 
 ```
 
