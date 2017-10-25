@@ -7,29 +7,26 @@ output: html_document
 
 #### Introduction
 
-##### As a parent of a high school senior, I am very interested in identifying universities which offer the best value for a high quality education. I found a dataset on data.gov which is maintained by the U.S. Department of Education and provides data about colleges at: https://collegescorecard.ed.gov/data/. 
+##### When selecting a college, high school students and their families try to identify universities which offer the best value for a high quality education. To help find this information, this analysis will use a dataset on data.gov which is maintained by the U.S. Department of Education and provides data about colleges at: https://collegescorecard.ed.gov/data/. 
 
-##### While the dataset contains more than 2,000 fields of data, it is limited in that it seems to only include information about families who have applied for financial aid. It does not include families who earn too much money to qualify for financial aid and thus did not apply, families who would be eligible but simply chose not to apply, and international students who would not be eligible to apply for FAFSA.   
+##### While the dataset contains more than 2,000 fields of data, it is limited in that it seems to only include information about families who have applied for financial aid. It does not include families who earn too much money to qualify for financial aid and thus did not apply, families who would be eligible but did not apply, and international students who would not be eligible to apply for FAFSA.   
 
-##### The data includes information about Federal student loans and grants, but does not include private loans, scholarships or grants.  Therefore, data such as the average family income and average tuition paid are likely lower than what the numbers actually are. According to CNN Money (http://time.com/money/4520236/college-financial-aid-why-students-dont-apply/), about 80% of students apply for financial aid.
+##### The data includes information about Federal student loans and grants, but does not include private loans, scholarships or grants.  Therefore, data such as the average family income and average tuition paid are likely lower than what the numbers actually are since families with very high incomes would not have applied for financial aid. According to CNN Money (http://time.com/money/4520236/college-financial-aid-why-students-dont-apply/), about 80% of college students apply for financial aid.
 
-#### The Process
+### The Process: Data Cleaning and Focus
 
-##### The following analysis focuses on accredited schools, using the most current data from the 2015-16 school year.  It groups universities by SAT Scores and then shows how they compare by Annual Cost. I removed data about schools that were not 4 year degree institutions or that were specialty schools.  The schools in this analysis are general 4 year colleges, public and private.  
+##### The following analysis focuses on accredited schools, using the most current data from the 2015-16 school year.  It groups universities by SAT Scores and then shows how they compare by Annual Cost. I removed data about schools that were not 4 year degree institutions or that were specialty schools.  The schools in this analysis are general 4 year public or private colleges.  
 
 ##### I separated the colleges into three groups:  
-##### 1 - Schools that rank in the 90th percentile or above based on SAT scores
+##### 1 - Schools that rank in the 90th percentile or higher based on SAT scores
 ##### 2 - Schools within the 75th-90th percentile based on SAT scores
 ##### 3 - Schools within the 50th-75th percentile based on SAT scores
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
-setwd("/Users/claudiacassidy/DS/college")
+setwd("/Users/cassc042/Documents/ds")
 getwd()
-#dd <- read.delim('oe.data.1.AllData.txt') 
-
-# Colleges
 
 library(tidyr)
 library(dplyr)
@@ -39,6 +36,7 @@ library(RColorBrewer)
 library(gridExtra)
 library(maps)
 library(ggplot2)
+library(leaflet)
 library(rio)
 install_formats()
 
@@ -46,7 +44,7 @@ cc <- read.csv("MERGED2015_16_PP.csv", header=T, fill = TRUE, row.names=1)
 
 ```
 
-##### After cleaning up the data, I wanted to group colleges in a meaningful way. The right fit for a student at a college might be better related to their SAT scores.  Without data about GPA or campus culture, I decided that it might be most useful to group colleges by their SAT scores.  Students with similar SAT scores would likely fit in better with other students who had similar scores. For example, if a school's average SAT scores are much higher than the student's SAT scores, then the student might find herself lost and stressed at the intensity of the pace of learning.  
+##### After cleaning up the data, I wanted to group colleges in a meaningful way. The right fit for a student at a college might be related to many considerations, such as demographics, school size, location in a big city vs. a smaller suburb. Without data about GPA or campus culture, I decided that it might be most useful to group colleges by their SAT scores.  Students with similar SAT scores would likely fit in better with other students who had similar scores. For example, if a school's average SAT scores are much higher than a student's SAT scores, then the student might find herself lost and stressed at the intensity of the pace of learning.  
 
 ##### I considered other ways to evaluate schools for the best student to school match, for example demographics data such as gender, race and family income, but these are highly subjective and cannot indicate a good fit. SAT scores could be used to group students who scored similarly. 
 
@@ -394,7 +392,9 @@ cor(ccCor$Tot3SAT75 ,ccCor$AdmRate2)
 
 #### The data further shows that the average family income in the top 10th percentile, $91,787, is higher than the 75-90th percentile, $87,285, which is in turn higher than the family income in the 50-75th percentile, $75,629.  The data is showing that perhaps Family Income determines your future SAT scores and therefore your likelihood of getting into a good college and therefore your chances of getting the best education in order to get the best job and preparation for financial success after graduation.
 
-#### Perhaps families with higher incomes are able to provide better quality education at the K-12 grades which leads to higher SAT scores.  Perhaps K-12 schools in wealthier neighborhoods and private schools better prepare students to score higher on the SAT which then leads to more opportunities for these students to get into better colleges.
+#### Perhaps families with higher incomes are able to provide better quality education at the K-12 grades which leads to higher SAT scores.  Perhaps K-12 schools in wealthier neighborhoods and private schools better prepare students to score higher on the SAT which then leads to more opportunities for these students to get into better colleges. 
+
+##### Since colleges select the highest scores in each category and students are able to retake the SAT as many times as they'd like, it's possible that students in higher income homes were able to pay to have SAT preparation courses and to take the exam several times more than students who could not afford to do that.
 
 
 ```{r}
