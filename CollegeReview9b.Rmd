@@ -1,0 +1,809 @@
+---
+title: "Evaluation of Colleges by SAT Scores and Annual Cost"
+author: "Claudia Cassidy"
+date: "10/27/2017"
+output:
+  html_document: default
+---
+
+#### Introduction
+
+When selecting a college, high school students and their families often try to identify universities which offer the best value for a high quality education. To help find this information, this analysis will use a dataset on data.gov which is maintained by the U.S. Department of Education and provides data about colleges at: https://collegescorecard.ed.gov/data/. 
+
+
+
+### Univariate Plot Section
+
+While the dataset contains more than 2,000 fields of data, this report is going to focus on the annual cost, the average SAT scores of the students, and the average family income of the students who attended each school in the 2015-16 academic year.  The dataset includes information about all kinds of schools.  This report will only include the data pertaining to general, four year colleges.
+
+
+```{r setup, include=FALSE,  echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+options(knitr.table.format = "html")
+
+library(tidyr)
+library(dplyr)
+library(plyr)
+library(reshape2)
+library(RColorBrewer)
+library(gridExtra)
+library(maps)
+library(ggplot2)
+library(leaflet)
+library(kableExtra)
+library(rio)
+install_formats()
+
+# Import the data
+cc <- read.csv("MERGED2015_16_PP.csv", header=T, fill = TRUE, row.names=1)
+
+# Data Cleanup:
+cc$CCBASIC <- as.numeric(as.character(cc$CCBASIC))
+cc$PREDDEG <- as.numeric(as.character(cc$PREDDEG))
+
+### Eliminate non-accredited schools from the dataset. Eliminated about 720 rows.
+ccA <- subset(cc, cc$ACCREDAGENCY != "" & cc$ACCREDAGENCY != "NULL")
+
+### Select 4 year bachelor through PhD colleges and universities, number of rows remaining: 1,165
+ccA <- subset(ccA,  ccA$PREDDEG >= 3 & ccA$CCBASIC >= 14 & ccA$CCBASIC <= 23)
+
+### Rename columns:
+ccA <- rename(ccA, c("SAT_AVG" = "Avg SAT", 
+                      "ADM_RATE" = "Admission Rate", 
+                      "FAMINC" = "Family Income", 
+                      "INSTNM" = "Name", 
+                      "COSTT4_A" = "Cost Annual", 
+                      "TUITIONFEE_IN" = "InStateTuition", 
+                      "TUITIONFEE_OUT" = "OutStateTuition", 
+                      "PCTFLOAN" = "FederalLoans %", 
+                      "LATITUDE" = "Latitude", 
+                      "LONGITUDE" = "Longitude"))
+
+### Select a subset of the available columns:
+ccCols <- c("Name","Avg SAT","SATVR75","SATMT75","SATWR75", 
+            "Admission Rate","Cost Annual","Family Income",
+            "InStateTuition", "OutStateTuition", "Latitude", "Longitude")
+cc1 <- ccA[ccCols]
+
+```
+
+
+
+I eliminated non-accredited, specialized schools, and schools that offer a highest degree of Associate's level and selecting 4 year bachelor degree issuing schools, I was left with 1,165 observations.
+
+Here are the fields I selected from the dataset:
+
+```{r}
+
+str(cc1)
+
+```
+
+
+
+
+##### Limitations of the data:
+* One major limitation of the data is that it only includes information about students who applied for financial aid through the federal government through FAFSA.  Students are not required to apply for financial aid.  According to CNN Money (http://time.com/money/4520236/college-financial-aid-why-students-dont-apply/), about 80% of college students apply for financial aid.  
+
+* The average SAT scores appeared to be on the lower side. This is probably because colleges allow students to take the SAT multiple times and will use only the highest SAT scores in each section and then total them. To account for this, I replaced the given average SAT score with a new field: a calculated sum of the 75th percentile SAT scores in the math, reading, and writing sections, to get a more realistic average SAT score. 
+
+* The data includes information entered by families applying for Federal student loans and grants, but does not include private loans, scholarships or grants.  Therefore, data such as the average family income and average tuition paid are likely higher than what the numbers state. Students may not apply because their family income is too high so they would not be eligible, they may have chosen not to apply, or they may be international students and/or otherwise not eligible.
+
+* As noted in the Data Documentation (https://collegescorecard.ed.gov/data/documentation/):  "many elements are available only for Title IV recipients, or students who receive federal grants and loans."
+
+### Data Cleaning
+
+Data cleaning involved converting strings to numerics, removing NA's, and creating the new calculated field for SAT Average. 
+
+```{r}
+
+
+# Create a new field which shows the 75th percentile SAT scores totaled by Math, Reading and Writing.  Colleges accept the students' highest scores on each of these segments when evaluating a student's SAT score, so this would be a more accurate measure of the SAT scores accepted considering that we do not know the students' GPA and other factors. Create a new field for total Reading + Math, and another new field for total Reading + Math + Writing, since some schools don't consider the Writing score.
+#ccA$'Tot3SAT75' <- ccA$SATVR75 + ccA$SATMT75 + ccA$SATWR75
+#ccA$'Tot2SAT75' <- ccA$SATVR75 + ccA$SATMT75 
+
+
+
+### Convert strings to numeric
+cc1$`Avg SAT` <- as.numeric(as.character(cc1$`Avg SAT`))
+cc1$SATMT75 <- as.numeric(as.character(cc1$SATMT75))
+cc1$SATVR75 <- as.numeric(as.character(cc1$SATVR75))
+cc1$SATWR75 <- as.numeric(as.character(cc1$SATWR75))
+cc1$`Cost Annual` <- as.numeric(as.character(cc1$`Cost Annual`))
+cc1$`Latitude` <- as.numeric(as.character(cc1$`Latitude`))
+cc1$`Longitude` <- as.numeric(as.character(cc1$`Longitude`))
+cc1$`Family Income` <- as.numeric(as.character(cc1$`Family Income`))
+cc1$`SAT Avg` <- cc1$SATVR75 + cc1$SATMT75 + cc1$SATWR75
+
+
+### exclude NA and 0 values for Admission Rate, Average SAT and Annual Cost
+cc2 <- subset(cc1,  cc1$`SAT Avg` > 0,  na.rm = TRUE )
+
+
+ccColSum <- c("SAT Avg", "Cost Annual","Family Income")
+ccSum <- cc2[ccColSum]
+
+```
+
+The numeric fields after clean up:
+```{r}
+
+str(ccSum)
+
+```
+
+Here is a summary:
+
+```{r}
+
+summary(ccSum)
+
+
+```
+
+After eliminating NAs and zero values for SAT and Annual Cost, we are left with 642 observations.
+
+Average SAT score: 1749,
+Average Annual Cost (tuition + housing + food): $35,778,
+Average Family Income: $69,460
+
+
+###Univariate Plots
+
+```{r echo=FALSE}
+hist(cc2$`SAT Avg`,
+     main = "Average SAT Score for All Colleges",
+     xlab = "Sum of Average 75th Percentile of SAT Scores")
+```
+
+
+```{r echo=FALSE}
+hist(cc2$`Cost Annual`,
+     main = "Average Annual Cost for All Colleges",
+     xlab = "Annual Cost = (Tuition + Housing + Food)")
+```
+
+```{r}
+hist(cc2$`Family Income`,
+     main = "Average Family Income for All Colleges",
+     xlab = "Average Family Income (Financial Aid Applicants)")
+```
+
+###Univariate Analysis
+
+I wanted to further break down the data so I separated the colleges into three groups:  
+
+*1 - Schools that rank in the 90th percentile or higher based on SAT scores
+*2 - Schools in the 75th-90th percentile based on SAT scores
+*3 - Schools in the 50th-75th percentile based on SAT scores
+
+<br>
+
+After cleaning up the data, I wanted to group colleges in a meaningful way. The right fit for a student at a college might be related to many considerations, such as demographics, school size, location in a big city vs. a smaller suburb. Without data about GPA or campus culture, I decided that it might be most useful to group colleges by their SAT scores.  Students with similar SAT scores would likely fit in better with other students who had similar scores. For example, if a school's average SAT scores are much higher than a student's SAT scores, then the student might find herself lost and stressed at the intensity of the pace of learning.  
+
+I considered other ways to evaluate schools for the best student to school match, for example demographics data such as gender, race and family income, but these are highly subjective and cannot indicate a good fit. SAT scores seemed like a good way to group the colleges. 
+
+As noted earlier, colleges allow students to take the SAT multiple times and will use only the highest SAT scores in each section to get a student's total SAT score.  Therefore, I used the sum of the 75th percentile SAT scores totaled by Math, Reading and Writing categories instead of the SAT Average to get a truer SAT average. 
+
+Colleges also consider a student's Grade Point Average in High School, extra-curricular activities and essay submission when evaluating students.  Without this data, this analysis is limited in how accurate it can be in selecting schools that would be a good match.  It will, however, help to identify high quality schools that offer lower annual costs. 
+
+Note that the SAT scoring has changed as of 2017.  The data in this analysis is based on the former scoring system.  Conversion of 2017 and beyond scores to the previous scoring system can be found at:  https://blog.ivywise.com/blog-0/sat-score-conversion-chart
+
+
+##### The summary below shows that the highest score for each of the 3 sections: reading, math and writing, is 800.  Highest total score for all 3 is 2400. 
+
+```{r}
+summary(ccSum)
+```
+
+
+The 75th percentile of the highest sum of SAT scores is 1870 and the 90th percentile is 2160. The mean is 1749.
+
+------
+
+### Group 1:  90th percentile of the SAT Average and Higher: (2170-2400), Orderd by SAT Scores
+
+```{r}
+
+# Top 10% of schools as measured by 90th percentile, total of best SAT scores
+ccTopTenth <-subset(cc2, (!is.na(cc2$`SAT Avg`)))
+ccTopTenth <- subset(ccTopTenth, ccTopTenth$`SAT Avg` >= 2170)
+
+ccTopTenthC <- c("Name","SAT Avg","Cost Annual","Family Income")
+ccTopTenthD <- ccTopTenth[ccTopTenthC]
+
+ccTopTenthD <- ccTopTenthD[order(ccTopTenthD$`SAT Avg`, decreasing = TRUE), ]
+
+library(knitr)
+kable(ccTopTenthD, "html") %>%
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 1: Colleges by SAT Score" = 4)) %>%  
+  scroll_box(width = "100%", height = "400px")
+
+```
+
+
+```{r}
+
+ccTopTenthE <- ccTopTenthD[order(ccTopTenthD$`Cost Annual`, decreasing = FALSE), ]
+
+library(knitr)
+kable(ccTopTenthE, "html") %>%
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 1: Colleges by Annual Cost" = 4)) %>% 
+  scroll_box(width = "100%", height = "400px")
+```
+
+
+```{r}
+
+ccTopTenthF <- ccTopTenthD[order(ccTopTenthD$`Family Income`, decreasing = FALSE), ]
+
+library(knitr)
+kable(ccTopTenthF, "html") %>%
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 1: Colleges by Family Income" = 4)) %>% 
+  scroll_box(width = "100%", height = "400px")
+```
+
+
+
+
+
+#### Summary of the Group 1 Colleges 
+
+```{r}
+
+# Get the summary of top tenth percentile schools
+ccSumTopTenth <- ccTopTenth[ccColSum]
+summary(ccSumTopTenth)
+```
+
+For Group 1, the Average Annual Cost of colleges in the 90th percentile and up based on average SAT scores was $58,977 in 2015.  
+Group 1 average SAT scores: 2276
+Group 1 average family income of those students who applied for financial aid: $92,495
+
+```{r}
+
+hist(ccTopTenth$`SAT Avg`,
+     xlim = c(2150,2400),
+     breaks=seq(2150,2400,10),
+     main = "Group 1, 90th Percentile+: Average SAT Scores",
+     xlab = "Sum of Average 75th Percentile of SAT Scores")
+
+```
+
+The average SAT score for Group 1 colleges is between 2276.
+
+```{r echo=FALSE}
+hist(ccTopTenth$`Cost Annual`,
+    xlim = c(10000,80000),
+    breaks=seq(20000,70000,10000),
+    main = "Group 1: Average Annual Cost",
+    xlab = "Annual Cost = (Tuition + Housing + Food)")
+```
+
+The average annual cost of most Group 1 colleges is $58,977. Private colleges in Group 1 cost about twice as much per year as public colleges with in-state tuition. 
+
+
+```{r}
+hist(ccTopTenth$`Family Income`,
+    xlim = c(40000,150000),
+    breaks=seq(40000,150000,2500),     
+    main = "Group 1: Average Family Income",
+    xlab = "Average Family Income (Financial Aid Applicants)")
+```
+
+The average family income of students in Group 1 colleges who applied for Federal financial aid is $92,495.
+
+------
+### Group 2: Schools in the 75-90th percentile as ranked by the sum of the three highest SAT scores
+
+
+```{r}
+# The 75-90th percentile schools ordered by SAT Score:
+
+ccTop7590 <-subset(cc2, (!is.na(cc2$`SAT Avg`)))
+ccTop7590 <- subset(ccTop7590, 
+                    ccTop7590$`SAT Avg` < 2170 & ccTop7590$`SAT Avg` > 1870 )
+ccTop7590 <- ccTop7590[order(ccTop7590$`Cost Annual`, decreasing = FALSE), ]   
+ccTop7590C <- c("Name","SAT Avg","Cost Annual","Family Income")
+ccTop7590D <- ccTop7590[ccTop7590C]
+ccTop7590D <- ccTop7590D[order(ccTop7590$`SAT Avg`, decreasing = TRUE), ]   
+
+library(knitr)
+kable(ccTop7590D, "html") %>%  
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 2: Colleges by SAT Score" = 4)) %>%  
+  scroll_box(width = "100%", height = "400px")
+```
+
+
+```{r}
+
+ccTop7590E <- ccTop7590D[order(ccTop7590D$`Cost Annual`, 
+                               decreasing = FALSE), ]
+
+library(knitr)
+kable(ccTop7590E, "html") %>%
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 2: Colleges by Annual Cost" = 4)) %>% 
+  scroll_box(width = "100%", height = "400px")
+```
+
+
+```{r}
+
+ccTop7590F <- ccTop7590D[order(ccTop7590D$`Family Income`, 
+                               decreasing = FALSE), ]
+
+library(knitr)
+kable(ccTop7590F, "html") %>%
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 2: Colleges by Family Income" = 4)) %>% 
+  scroll_box(width = "100%", height = "400px")
+```
+
+Summary of Schools in the 75th - 90th Percentiles based on SAT Scores
+
+
+
+```{r}
+
+# Get the summary of 75-90th percentile schools
+ccSumTop7590 <- ccTop7590[ccColSum]
+summary(ccSumTop7590)
+```
+
+Group 2 colleges average annual cost was $41,643 in 2015.  
+Average of the highest Total SAT scores:  1983
+Average family income of those students who applied for financial aid: $87,714.
+
+
+```{r}
+
+hist(ccTop7590$`SAT Avg`,
+     xlim = c(1850,2150),
+     breaks=seq(1800,2200,10),
+     main = "Group 2, 75-90th Percentile: Average SAT Scores",
+     xlab = "Sum of Average 75th Percentile of SAT Scores")
+
+```
+
+Average SAT score for colleges in Group 2 is 1983.
+
+```{r echo=FALSE}
+hist(ccTop7590$`Cost Annual`,
+     xlim = c(10000,70000),
+      breaks=seq(10000,70000,5000),
+    main = "Group 2: Average Annual Cost",
+     xlab = "Annual Cost = (Tuition + Housing + Food)")
+```
+
+Average annual cost for Group 2 colleges ranges from about $17,000 to $65,000 and is $41,643.
+
+
+```{r}
+hist(ccTop7590$`Family Income`,
+    xlim = c(40000,160000),
+    breaks=seq(40000,150000,2500),     
+    main = "Group 2: Average Family Income",
+    xlab = "Average Family Income (Financial Aid Applicants)")
+```
+
+The average family income for Group 2 colleges is $87,714.
+
+
+### Group 3:  The 50th - 75th percentile schools as measured by the highest SAT scores combined:  between 1749 and 1870
+
+```{r}
+
+# 50-75th percentile schools as measured by total of best SAT scores
+ccTop5075 <-subset(cc2, (!is.na(cc2$`SAT Avg`)))
+ccTop5075 <- subset(ccTop5075, ccTop5075$`SAT Avg` < 1870 
+                    & ccTop5075$`SAT Avg` >= 1749 )
+ccTop5075 <- ccTop5075[order(ccTop5075$`SAT Avg`, decreasing = TRUE), ]   
+
+ccTop5075C <- c("Name","SAT Avg","Cost Annual","Family Income")
+ccTop5075D <- ccTop5075[ccTop5075C]
+#ccTop5075D <- ccTop5075D[order(ccTop5075D$`SAT Avg`, decreasing = TRUE), ]   
+
+library(knitr)
+kable(ccTop5075D, "html") %>%  
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 3: Colleges by SAT Score" = 4)) %>%  
+  scroll_box(width = "100%", height = "400px")
+
+```
+
+
+```{r}
+# The 50-75th percentile schools ordered by Annual Cost:
+ccTop5075 <- ccTop5075[order(ccTop5075$`Cost Annual`, decreasing = FALSE), ]   
+
+ccTop5075C <- c("Name","SAT Avg","Cost Annual","Family Income")
+ccTop5075D <- ccTop5075[ccTop5075C]
+ccTop5075D <- ccTop5075D[order(ccTop5075D$`Cost Annual`, decreasing = FALSE), ]   
+library(knitr)
+kable(ccTop5075D, "html") %>%
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 3: Colleges by Annual Cost" = 4)) %>% 
+  scroll_box(width = "100%", height = "400px")
+```
+
+
+```{r}
+
+ccTop5075F <- ccTop5075D[order(ccTop5075D$`Family Income`, 
+                               decreasing = FALSE), ]
+
+library(knitr)
+kable(ccTop5075F, "html") %>%
+  kable_styling("striped", "responsive", full_width = F, font_size = 14) %>%
+  column_spec(2, width = "30em")  %>% 
+  add_header_above(c(" " = 1, "Group 3: Colleges by Family Income" = 4)) %>% 
+  scroll_box(width = "100%", height = "400px")
+```
+
+
+##### Summary of Group 3 Colleges:
+```{r}
+
+# Get the summary of top tenth percentile schools
+ccSumTop5075 <- ccTop5075[ccColSum]
+summary(ccSumTop5075)
+```
+
+Group 3 colleges:
+* Average SAT scores:  1802
+* Average Annual Cost was $36,230 in 2015.  
+* Average Family Income of those students who applied for financial aid: $75,629
+
+
+
+```{r}
+
+hist(ccTop5075$`SAT Avg`,
+     xlim = c(1700,1900),
+     breaks=seq(1700,1900,10),
+     main = "Group 3, 50-75th Percentile: Average SAT Scores",
+     xlab = "Sum of Average 75th Percentile of SAT Scores")
+
+```
+
+The Average SAT score for Group 3 colleges is 1802.
+
+```{r echo=FALSE}
+hist(ccTop5075$`Cost Annual`,
+     xlim = c(12000,70000),
+      breaks=seq(12000,70000,5000),
+    main = "Group 3: Average Annual Cost",
+     xlab = "Annual Cost = (Tuition + Housing + Food)")
+```
+
+Group 3 average annual cost is $36,230.
+
+```{r}
+hist(ccTop5075$`Family Income`,
+    xlim = c(20000,160000),
+    breaks=seq(20000,150000,2500),     
+    main = "Group 3: Average Family Income",
+    xlab = "Average Family Income (Financial Aid Applicants)")
+```
+
+Group 3 average family income is $75,629.
+
+---------
+
+### Bivariate Plots
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+cc3 <-subset(cc2, (!is.na(cc2$`SAT Avg`)))
+
+#add a column to distinguish each group
+ccTopTenth$`Group` <- "90th Percentile +"
+ccTop7590$`Group` <- "75-90th Percentile"
+ccTop5075$`Group` <- "50-75th Percentile"
+
+#combine the 3 groups into a new dataframe
+ggdat <- rbind(ccTopTenth,ccTop7590,ccTop5075)
+
+#group the data
+df <- ggdat %>% group_by(ggdat$Group)
+
+# A basic scatter plot
+p <- ggplot(df, aes(`SAT Avg`, `Cost Annual`))
+p + geom_point(aes(colour = factor(`Group`)), size = 1)
+
+
+```
+
+The scatter plot shows that most colleges in the 90th percentile and above as measured by SAT scores have a higher annual cost than colleges with lower SAT requirements. There are a small number of exceptions at public universities with in-state tuition.
+
+There is a moderate correlation between annual cost and SAT average score. The correlation in our data is: 0.537
+
+```{r}
+  cor(df$`SAT Avg`,df$`Cost Annual`)
+```
+
+
+```{r}
+
+p2 <- ggplot(df, aes(`Family Income`,`SAT Avg`))
+p2 + geom_point(aes(colour = factor(`Group`)), size = 1)
+
+
+```
+
+This scatter plot compares Family Income to SAT Average for those families who applied for Federal Financial Aid.  The data shows that average family income is slightly higher for those colleges with higher SAT range.
+
+There is a weak correlation between family income (for those families who applied for Federal Financial Aid) and SAT average score. The correlation in our data is: 0.298.
+
+```{r}
+  cor(df$`SAT Avg`,df$`Family Income`)
+```
+
+```{r}
+
+k <- ggplot(df, aes(`Family Income`, ..density..)) + geom_histogram(binwidth = 5000)
+k + facet_grid(. ~ `Group`)
+```
+
+
+
+
+```{r}
+
+k2 <- ggplot(df, aes(`Cost Annual`, ..density..)) + geom_histogram(binwidth = 5000)
+k2 + facet_grid(. ~ `Group`)
+```
+
+Colleges which require the higher SAT Scores (90th percentile and above) tend to have a higher annual cost than those in the 75-90th and 50-75th percentiles.
+
+
+
+### Bivariate Analysis
+
+It would be interesting to know if there are relationships between family income and SAT scores and between annual cost and SAT scores.  
+
+
+
+
+
+#### Correlations:
+
+#####Correlations between SAT Scores and Annual Cost, 50-75th Percentile:
+```{r}
+cor(ccTop5075$`SAT Avg`,ccTop5075$`Cost Annual`)
+```
+
+In Group 3, the 50-75th percentile, there is only a .19 correlation between average SAT score and annual cost. SAT Scores are not related to annual cost in Group 3.  
+
+#####Correlations between SAT Scores and Annual Cost, 75-90th Percentile:
+```{r}
+cor(ccTop7590$`SAT Avg`,ccTop7590$`Cost Annual`)
+```
+
+In Group 2, the 75-90th percentile, there is only a .13 correlation between average SAT score and annual cost. SAT Scores are not related to annual cost in Group 2.  
+
+
+#####Correlations between SAT Scores and Annual Cost, 90th Percentile and Above:
+```{r}
+cor(ccTopTenth$`SAT Avg`,ccTopTenth$`Cost Annual`)
+```
+
+In Group 1, the 90th percentile and above, there is a weak correlation of 0.35 between SAT scores and annual cost.
+
+
+
+### Multivariate Plots
+
+Putting it all together, I wanted to see if we could get a visualization of schools ranked by SAT scores and Annual Cost.  The highest SAT scores at the lowest cost would be the best value colleges.
+
+
+
+```{r}
+
+ggplot(df, aes(`Cost Annual`, `Family Income`)) +
+  geom_point(aes(color = `Group`)) +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. Annual Cost of College", 
+       x = "Annual Cost", 
+       caption = "Colleges in the 50th percentile and up") + 
+  scale_y_continuous(limits=c(0,150000)) +
+  theme_bw()
+
+```
+
+The cost of college is generally higher for colleges in which the average SAT scores are higher. Average family income of financial aid applicants is slightly higher for the 90th percentile group than for the other groups.  
+
+```{r}
+
+ggplot(ccTopTenth, aes(`Cost Annual`, `Family Income`)) +
+  geom_point(aes(color = `Group`)) +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. Annual Cost of College", 
+       x = "Annual Cost") + 
+  scale_y_continuous(limits=c(0,150000)) +
+  theme_bw()
+
+```
+
+
+```{r}
+
+ggplot(ccTop7590, aes(`Cost Annual`, `Family Income`)) +
+  geom_point(aes(color = `Group`)) +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. Annual Cost of College", 
+       x = "Annual Cost") + 
+  scale_y_continuous(limits=c(0,150000)) +
+  theme_bw()
+
+```
+
+```{r echo=FALSE}
+
+ggplot(ccTop5075, aes(`Cost Annual`, `Family Income`)) +
+  geom_point(aes(color = `Group`)) +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. Annual Cost of College", 
+       x = "Annual Cost", y = "Family Income") + 
+  scale_y_continuous(limits=c(0,150000)) +
+  theme_bw()
+
+```
+
+
+```{r}
+
+ggplot(cc2, aes(`Family Income`, `SAT Avg`)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. SAT Avg for All Percentiles", 
+       x = "Family Income", y = "SAT Scores") + 
+  scale_y_continuous(limits=c(1100,2400)) +
+  theme_bw()
+
+```
+
+When I included colleges which were below the SAT Average mean of 1749 I was surprised to find that there is a high correlation between family income and SAT scores.  
+
+```{r}
+ccCor <-subset(cc2, (!is.na(cc2$`SAT Avg`)))
+cor(ccCor$`SAT Avg`,ccCor$`Family Income`)
+```
+
+There was a .62 correlation between family income and SAT scores when the dataset included colleges in which the average SAT scores are below the mean of 1749.
+
+```{r}
+
+ccBot <-subset(cc2, (!is.na(cc2$`SAT Avg`)))
+ccBot <- subset(ccBot, ccBot$`SAT Avg` < 1749)
+
+
+ggplot(ccBot, aes(`Family Income`, `SAT Avg`)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. SAT Avg for Below 50th Percentile", 
+       x = "Family Income", y = "SAT Scores") + 
+  scale_y_continuous(limits=c(1100,1800)) +
+  theme_bw()
+
+```
+
+```{r}
+ccCor <-subset(ccBot, (!is.na(ccBot$`SAT Avg`)))
+cor(ccCor$`SAT Avg`,ccCor$`Family Income`)
+```
+
+There is a moderate correlation of .514 between SAT scores and family income for the 50th percentile and below.
+
+```{r}
+ccCor <-subset(df, (!is.na(df$`SAT Avg`)))
+cor(ccCor$`SAT Avg`,ccCor$`Family Income`)
+```
+
+There is a weak correlation of 0.3 between SAT scores and family income for the 50th percentile and above.
+
+
+### Multivariate Analysis
+
+A student interested in attending a college in the 90th percentile and up will not have much of a choice in the annual cost of going to college. Almost all colleges in Group 1 cost between $60,000-$70,000 per year with the exception of instate public universities.
+
+A student interested in attending a college in the 50-75th and 75-90th percentiles has many options.  Annual cost of attending a college in Groups 2 and 3 can range from less than $20,000 to $70,000 per year.  Public universities with instate tuition are less expensive than private universities.
+
+There appears to be a relationship between family income and SAT scores. It would be interesting to investigate further and to consider other variables such as student age, public vs. private colleges, ethnicity, and other demographic data.
+
+
+### Strengths and Limitations of the Data
+
+The dataset only includes data for families who applied for federal financial aid. The numbers for Annual Cost and Family Income may actually be higher if we also had data about families who did not apply for FAFSA, especially in the 90th percentile schools.
+
+
+### Final Plots and Summary
+
+```{r}
+
+ccBot$`Group` <- "Below 50th Percentile"
+
+dfAll <- rbind(ccBot,ccTop5075,ccTop7590,ccTopTenth)
+
+ggplot(dfAll, aes(`Cost Annual`, `Family Income`)) +
+  geom_point(aes(color = `Group`)) +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. Annual Cost of College", 
+       x = "Annual Cost") + 
+  scale_y_continuous(limits=c(0,150000)) +
+  theme_bw()
+```
+
+Colleges in which the average SAT scores are below the mean tend to cost less and have students whose average family incomes are lower than those that are above the mean.
+
+
+```{r}
+
+ggplot(dfAll, aes( `Cost Annual`, `SAT Avg` )) +
+  geom_point(aes(color = `Group`)) +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Annual Cost vs. SAT Scores", 
+       x = "Annual Cost") + 
+  scale_y_continuous(limits=c(1100,2400)) +
+  theme_bw()
+```
+
+```{r}
+
+ggplot(dfAll, aes( `Family Income`, `SAT Avg` )) +
+  geom_point(aes(color = `Group`)) +
+  geom_smooth(method = "lm") +
+  coord_cartesian() +
+  labs(title = "Family Income vs. SAT Scores", 
+       x = "Family Income") + 
+  scale_y_continuous(limits=c(1100,2400)) +
+  theme_bw()
+```
+
+It appears that family income is related to SAT scores.  The lower the family income, the lower the SAT score, especially when SAT scores are below the mean.
+
+
+
+### REFLECTIONS
+
+Taking it further, we could break down the data by major.  For example, a student majoring in journalism might want to eliminate colleges that do not have a journalism major from the dataset. This analysis used only SAT scores to group the colleges. 
+
+It would be interesting to explore further if there is a relationship between family income and average SAT scores. The data shows that there is a correlation between Family Income and High SAT scores. The top 10 percentile of colleges accept students with the highest SAT scores. A student from a higher income family is perhaps more likely to have higher SAT scores.  
+
+The data further shows that the average family income in the top 10th percentile, $91,787, is higher than the 75-90th percentile, $87,285, which is in turn higher than the family income in the 50-75th percentile, $75,629.  It would be interesting to investigate further to see if family income determines your future SAT scores and therefore your likelihood of getting into a good college and therefore your chances of getting the best education in order to get the best job and preparation for financial success after graduation.
+
+Since colleges select the highest scores in each category and students are able to retake the SAT as many times as they'd like, it's possible that students in higher income homes were able to spend more money on SAT preparation courses and to take the exam several times more than students who could not afford to retake the exam and thus improve their scores.
+
+It would also be interesting to find out if families with higher incomes are able to provide better quality education at the K-12 grades which leads to higher SAT scores.  Perhaps K-12 schools in wealthier neighborhoods and private schools are better prepared to score higher on the SAT which then leads to more opportunities for these students to get into better colleges. 
+
+
+```{r}
+
+#end
+```
+
+
